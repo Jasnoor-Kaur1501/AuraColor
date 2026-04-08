@@ -538,4 +538,168 @@ const QUESTIONS = [
     ]
   }
 ];
+const AURAS = {
+  earth: {
+    name: "Moss\n& Amber",
+    desc: "You carry the energy of old forests and late afternoon sun. People feel grounded around you. You move slowly but with intention — your presence makes a room feel safe.",
+    traits: ["grounded", "patient", "nurturing", "quiet strength"],
+    palette: [
+      { color: "#3d2e18", name: "deep bark" },
+      { color: "#7a5c35", name: "warm oak" },
+      { color: "#c4a882", name: "sandstone" },
+      { color: "#7a9e6e", name: "sage" },
+      { color: "#3d5c38", name: "moss" }
+    ]
+  },
+  air: {
+    name: "Fog\n& Lavender",
+    desc: "You exist slightly above the noise. Your mind is always between here and an idea not yet formed. People find you fascinating and hard to fully pin down — exactly as you like it.",
+    traits: ["intellectual", "dreamy", "independent", "quietly magnetic"],
+    palette: [
+      { color: "#8c8aa0", name: "mist" },
+      { color: "#6e6a8a", name: "lavender" },
+      { color: "#b8b5cc", name: "haze" },
+      { color: "#5c6e80", name: "slate" },
+      { color: "#d8d5e8", name: "pearl" }
+    ]
+  },
+  fire: {
+    name: "Ember\n& Rust",
+    desc: "You burn at a frequency most can't keep up with. When you care, it consumes you. You create things that didn't exist before you arrived. Rest is something you're still learning.",
+    traits: ["passionate", "driven", "creative", "a lot (in a good way)"],
+    palette: [
+      { color: "#5c1a00", name: "deep ember" },
+      { color: "#a83010", name: "rust" },
+      { color: "#d4602a", name: "amber" },
+      { color: "#e89050", name: "glow" },
+      { color: "#2e0e00", name: "char" }
+    ]
+  },
+  void: {
+    name: "Ink\n& Indigo",
+    desc: "You live in the depth. Where others see darkness, you find texture. You feel everything — you've simply learned not to perform it. Your inner world is vast and rare.",
+    traits: ["deep", "perceptive", "intense", "selectively open"],
+    palette: [
+      { color: "#08080f", name: "midnight" },
+      { color: "#14102e", name: "deep indigo" },
+      { color: "#2a2058", name: "violet" },
+      { color: "#1a2848", name: "abyss" },
+      { color: "#382e50", name: "dusk" }
+    ]
+  }
+};
 
+let current = 0;
+let scores = { earth: 0, air: 0, fire: 0, void: 0 };
+let resultKey = null;
+const letters = ["A", "B", "C", "D"];
+
+function buildQPages() {
+  QUESTIONS.forEach((q, i) => {
+    const page = document.createElement("div");
+    page.className = "page q-page";
+    page.id = `page-q${i}`;
+
+    const bars = QUESTIONS.map((_, j) =>
+      `<div class="q-progress-bar ${j < i ? 'done' : j === i ? 'active' : ''}"></div>`
+    ).join("");
+
+    const opts = q.options.map((o, oi) => `
+      <button class="opt-btn" onclick="answer('${o.value}', ${i})">
+        <span class="opt-letter">${letters[oi]}.</span>
+        <span class="opt-text">${o.text}</span>
+        <span class="opt-arrow">→</span>
+      </button>
+    `).join("");
+
+    page.innerHTML = `
+      <div class="q-left">
+        <div class="q-progress">${bars}</div>
+        <div class="q-content">
+          <div class="q-label">Question ${i + 1} of ${QUESTIONS.length}</div>
+          <div class="q-text">${q.text}</div>
+        </div>
+        <div class="q-brand">AuraColor</div>
+        <div class="q-big-num">${i + 1}</div>
+      </div>
+      <div class="q-right">
+        <div class="q-instruction">Choose one</div>
+        ${opts}
+      </div>
+    `;
+    document.body.insertBefore(page, document.getElementById("page-result"));
+  });
+}
+
+function showPage(id) {
+  const all = document.querySelectorAll(".page");
+  all.forEach(p => {
+    if (p.classList.contains("active")) {
+      p.classList.add("exit");
+      p.classList.remove("active");
+      setTimeout(() => p.classList.remove("exit"), 650);
+    }
+  });
+  setTimeout(() => {
+    const next = document.getElementById(id);
+    if (next) next.classList.add("active");
+  }, 100);
+}
+
+function goToQ(i) { showPage(`page-q${i}`); }
+
+function answer(value, qIndex) {
+  scores[value]++;
+  const next = qIndex + 1;
+  if (next < QUESTIONS.length) {
+    goToQ(next);
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+  resultKey = top;
+  const aura = AURAS[top];
+
+  document.getElementById("resultName").textContent = aura.name;
+  document.getElementById("resultDesc").textContent = aura.desc;
+
+  const traits = document.getElementById("resultTraits");
+  traits.innerHTML = aura.traits.map(t => `<span class="trait-pill">${t}</span>`).join("");
+
+  const pal = document.getElementById("resultPalette");
+  pal.innerHTML = aura.palette.map(s =>
+    `<div class="palette-swatch" style="background:${s.color}">
+      <div class="swatch-name">${s.name}</div>
+    </div>`
+  ).join("");
+
+  showPage("page-result");
+}
+
+function restart() {
+  scores = { earth: 0, air: 0, fire: 0, void: 0 };
+  resultKey = null;
+  showPage("page-intro");
+}
+
+function copyAura() {
+  if (!resultKey) return;
+  const a = AURAS[resultKey];
+  const text = `My aura is ${a.name.replace("\n", " ")} ✨\n\n${a.desc}\n\nTraits: ${a.traits.join(", ")}\n\nDiscover yours → AuraColor`;
+  navigator.clipboard.writeText(text).then(() => toast("Aura copied ✦"));
+}
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+buildQPages();
+</script>
+</body>
+</html>
